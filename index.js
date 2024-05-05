@@ -1,55 +1,37 @@
 const { Transform } = require("stream");
-const { recursive } = require("merge");
-const mssql = require("mssql");
+const mysql = require("mysql2/promise");
+const rawMySQL = require("mysql2");
 
 class Database {
-  constructor({
-    host = "localhost",
-    port = 1433,
-    user = "sa",
-    password,
-    database = "master",
-    azure = false,
-    ...options
-  }) {
-    const defaultConfig = {
-      server: host,
+  constructor({ host = "localhost", port = 3306, user = "root", password, database = "mysql" }) {
+    this.config = {
+      host: host,
       port: port,
       user: user,
       password: password,
       database: database,
-      options: {
-        encrypt: azure,
-        trustServerCertificate: true
-      }
+      namedPlaceholders: true
     };
-
-    this.config = recursive(defaultConfig, options);
   }
 
   async open() {
-    this.connection = await mssql.connect(this.config);
+    this.pool = mysql.createPool(this.config);
   }
 
   async close() {
-    if (this.connection) {
-      await this.connection.close();
+    if (this.pool) {
+      await this.pool.end();
     }
   }
 
   async execute(sql, params = {}) {
-    const sqlRequest = createRequest(this.connection, params);
-
-    const response = await sqlRequest.query(sql);
-    const data = response.recordset;
-
-    return { data };
+    const [rows] = await this.pool.execute(sql, params);
+    return { data: rows };
   }
 
   async stream(sql, params = {}) {
-    const sqlRequest = createRequest(this.connection, params);
-    sqlRequest.stream = true;
-    sqlRequest.query(sql);
+    const pool = rawMySQL.createPool(this.config);
+    const resultStream = pool.query(sql, params);
 
     const transform = new Transform({
       objectMode: true,
@@ -58,34 +40,21 @@ class Database {
       }
     });
 
-    sqlRequest.on("row", row => {
+    resultStream.on("result", row => {
       transform.emit("data", row);
     });
 
-    sqlRequest.on("error", err => {
+    resultStream.on("error", err => {
       transform.emit("error", err);
     });
 
-    sqlRequest.on("done", () => {
+    resultStream.on("end", () => {
       transform.end();
-    });
-
-    sqlRequest.on("end", () => {
-      transform.end();
+      pool.end();
     });
 
     return transform;
   }
-}
-
-function createRequest(connection, params) {
-  const sqlRequest = connection.request();
-
-  Object.entries(params).forEach(([key, value]) => {
-    sqlRequest.input(key, value);
-  });
-
-  return sqlRequest;
 }
 
 module.exports = Database;

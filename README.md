@@ -1,22 +1,22 @@
-# @aux4/db-mssql
+# @aux4/db-mysql
 
 ## JavaScript
 
 ### Install
 
 ```bash
-$ npm install @aux4/db-mssql
+$ npm install @aux4/db-mysql
 ```
 
 ### Execute Query
 
 ```javascript
-const Database = require("@aux4/db-mssql");
+const Database = require("@aux4/db-mysql");
 const db = new Database({
   host: "localhost",
-  user: "sa",
+  user: "root",
   password: "******",
-  database: "master"
+  database: "mysql"
 });
 
 (async () => {
@@ -30,12 +30,12 @@ const db = new Database({
 ### Query Stream
 
 ```javascript
-const Database = require("@aux4/db-mssql");
+const Database = require("@aux4/db-mysql");
 const db = new Database({
   host: "localhost",
-  user: "sa",
+  user: "root",
   password: "******",
-  database: "master"
+  database: "mysql"
 });
 
 const stream = await db.stream("select * from table where id = @id", { id: 1 });
@@ -59,7 +59,7 @@ await db.close();
 
 ```bash
 $ npm install --global @aux4/db
-$ npm install --global @aux4/db-mssql
+$ npm install --global @aux4/db-mysql
 ```
 
 ### Usage
@@ -67,13 +67,13 @@ $ npm install --global @aux4/db-mssql
 #### Execute Query
 
 ```bash
-$ db execute --host localhost --port 1434 --user sa --database master --query "select * from table where id = @id" --id 1
+$ db execute --host localhost --port 3306 --user root --database mysql --query "select * from table where id = @id" --id 1
 ```
 
 #### Stream Query
 
 ```bash
-$ db stream --host localhost --port 1434 --user sa --database master --query "select * from table where id = @id" --id 1
+$ db stream --host localhost --port 3306 --user root --database mysql --query "select * from table where id = @id" --id 1
 ```
 
 #### Using @aux4/config
@@ -83,16 +83,17 @@ create `config.yaml`
 ```yaml
 config:
   dev:
-    mssql:
+    mysql:
+      type: mysql
       host: localhost
-      port: 1434
-      user: sa
+      port: 3306
+      user: root
       password: "******"
-      database: master
+      database: mysql
 ```
 
 ```bash
-$ db execute --configFile config.yaml --config dev/mssql --query "select * from table where id = @id" --id 1
+$ db execute --configFile config.yaml --config dev/mysql --query "select * from table where id = @id" --id 1
 ```
 
 ## See Also

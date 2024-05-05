@@ -25,7 +25,7 @@
             "echo ${versionNumber} released successfully"
           ],
           "help": {
-            "description": "release new version of @aux4/db-mssql",
+            "description": "release new version of @aux4/db-mysql",
             "variables": [
               {
                 "name": "version",
