@@ -319,7 +319,11 @@ aux4 db mysql execute --host localhost --port 3306 --user root --password mysecr
 ```
 
 ```beforeAll
-aux4 db mysql execute --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword --query "CREATE TABLE IF NOT EXISTS product (id INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Unique product identifier', name VARCHAR(100) NOT NULL COMMENT 'Product display name', price DECIMAL(10,2) DEFAULT '0.00' COMMENT 'Unit price in USD') COMMENT='Catalog of products for sale'"
+aux4 db mysql execute --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword --query "CREATE TABLE IF NOT EXISTS product (id INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Unique product identifier', name VARCHAR(100) NOT NULL COMMENT 'Product display name', price DECIMAL(10,2) DEFAULT '0.00' COMMENT 'Unit price in USD', sku VARCHAR(50)) COMMENT='Catalog of products for sale'"
+```
+
+```beforeAll
+aux4 db mysql execute --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword --query "CREATE TABLE IF NOT EXISTS tag (id INT PRIMARY KEY)"
 ```
 
 ```afterAll
@@ -328,7 +332,7 @@ aux4 db mysql execute --host localhost --port 3306 --user root --password mysecr
 
 ## Describe a table
 
-### should return canonical column metadata including comments
+### should return canonical column metadata, dropping null and empty fields
 
 ```execute
 aux4 db mysql describe --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword --table product
@@ -340,7 +344,6 @@ aux4 db mysql describe --host localhost --port 3306 --database introspect_test -
     "name": "id",
     "type": "int",
     "nullable": false,
-    "default": null,
     "key": "PRI",
     "extra": "auto_increment",
     "comment": "Unique product identifier"
@@ -349,9 +352,6 @@ aux4 db mysql describe --host localhost --port 3306 --database introspect_test -
     "name": "name",
     "type": "varchar",
     "nullable": false,
-    "default": null,
-    "key": "",
-    "extra": "",
     "comment": "Product display name"
   },
   {
@@ -359,21 +359,44 @@ aux4 db mysql describe --host localhost --port 3306 --database introspect_test -
     "type": "decimal",
     "nullable": true,
     "default": "0.00",
-    "key": "",
-    "extra": "",
     "comment": "Unit price in USD"
+  },
+  {
+    "name": "sku",
+    "type": "varchar",
+    "nullable": true
   }
 ]
 ```
 
-### should expose exactly the canonical key set in order
+### should keep only present keys per row (null/empty dropped, in definition order)
 
 ```execute
-aux4 db mysql describe --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword --table product | jq -c '.[0] | keys_unsorted'
+aux4 db mysql describe --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword --table product | jq -c 'map(keys_unsorted)'
 ```
 
 ```expect
-["name","type","nullable","default","key","extra","comment"]
+[["name","type","nullable","key","extra","comment"],["name","type","nullable","comment"],["name","type","nullable","default","comment"],["name","type","nullable"]]
+```
+
+### should reduce a plain column to just name, type, nullable
+
+```execute
+aux4 db mysql describe --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword --table product | jq -c '.[3]'
+```
+
+```expect
+{"name":"sku","type":"varchar","nullable":true}
+```
+
+### should never emit a null or empty-string value
+
+```execute
+aux4 db mysql describe --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword --table product | jq -c '[.[] | to_entries[] | .value] | map(select(. == null or . == "")) | length'
+```
+
+```expect
+0
 ```
 
 ### should emit nullable as a real JSON boolean (not "YES"/"NO", not 1/0)
@@ -383,7 +406,7 @@ aux4 db mysql describe --host localhost --port 3306 --database introspect_test -
 ```
 
 ```expect
-["boolean","boolean","boolean"]
+["boolean","boolean","boolean","boolean"]
 ```
 
 ## Describe a table with the desc alias
@@ -400,7 +423,6 @@ aux4 db mysql desc --host localhost --port 3306 --database introspect_test --use
     "name": "id",
     "type": "int",
     "nullable": false,
-    "default": null,
     "key": "PRI",
     "extra": "auto_increment",
     "comment": "Unique product identifier"
@@ -409,9 +431,6 @@ aux4 db mysql desc --host localhost --port 3306 --database introspect_test --use
     "name": "name",
     "type": "varchar",
     "nullable": false,
-    "default": null,
-    "key": "",
-    "extra": "",
     "comment": "Product display name"
   },
   {
@@ -419,16 +438,19 @@ aux4 db mysql desc --host localhost --port 3306 --database introspect_test --use
     "type": "decimal",
     "nullable": true,
     "default": "0.00",
-    "key": "",
-    "extra": "",
     "comment": "Unit price in USD"
+  },
+  {
+    "name": "sku",
+    "type": "varchar",
+    "nullable": true
   }
 ]
 ```
 
 ## List tables
 
-### should list base tables with their comment
+### should list base tables qualified by database, with comments when present
 
 ```execute
 aux4 db mysql list tables --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword
@@ -438,17 +460,54 @@ aux4 db mysql list tables --host localhost --port 3306 --database introspect_tes
 [
   {
     "name": "product",
+    "database": "introspect_test",
     "comment": "Catalog of products for sale"
+  },
+  {
+    "name": "tag",
+    "database": "introspect_test"
   }
 ]
 ```
 
-### should expose exactly the canonical key set in order
+### should keep only present keys per row (empty comment dropped)
 
 ```execute
-aux4 db mysql list tables --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword | jq -c '.[0] | keys_unsorted'
+aux4 db mysql list tables --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword | jq -c 'map(keys_unsorted)'
 ```
 
 ```expect
-["name","comment"]
+[["name","database","comment"],["name","database"]]
+```
+
+### should never emit a null or empty-string value
+
+```execute
+aux4 db mysql list tables --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword | jq -c '[.[] | to_entries[] | .value] | map(select(. == null or . == "")) | length'
+```
+
+```expect
+0
+```
+
+## List databases
+
+### should include a user database in the server listing
+
+```execute
+aux4 db mysql list databases --host localhost --port 3306 --user root --password mysecretpassword | jq -c 'map(.name) | index("introspect_test") != null'
+```
+
+```expect
+true
+```
+
+### should return one canonical {name} object per database
+
+```execute
+aux4 db mysql list databases --host localhost --port 3306 --user root --password mysecretpassword | jq -c '[.[] | keys] | unique'
+```
+
+```expect
+[["name"]]
 ```
