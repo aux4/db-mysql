@@ -37,6 +37,9 @@ aux4 db mysql execute \
 
 - [`aux4 db mysql execute`](./commands/db/mysql/execute) - Execute SQL statements on a MySQL database and return all results as a JSON array.
 - [`aux4 db mysql stream`](./commands/db/mysql/stream) - Execute SQL statements and stream each row as a newline-delimited JSON object.
+- [`aux4 db mysql describe`](./commands/db/mysql/describe) - Describe the columns of a table (types, keys, defaults, and comments) using a stable canonical schema.
+- [`aux4 db mysql desc`](./commands/db/mysql/desc) - Alias of `describe`.
+- [`aux4 db mysql list tables`](./commands/db/mysql/list/tables) - List the base tables in the current database with their comments.
 
 ### Command Reference
 
@@ -140,6 +143,115 @@ aux4 db mysql stream \
     --query "INSERT INTO user_audit (user_id, audit_name) VALUES (:id, :name)" \
     --inputStream
 ```
+
+## Schema Introspection
+
+The introspection commands let you explore a database's structure — ideal for AI agents and scripts that need to discover tables and columns before querying. They reuse the same connection flags as `execute` (`--host`, `--port`, `--database`, `--user`, `--password`) and always target the database given by `--database` (resolved through MySQL's `DATABASE()` function on the live connection).
+
+#### aux4 db mysql describe
+
+Return the columns of a table as a canonical JSON array, one object per column, in definition order.
+
+Usage:
+```bash
+aux4 db mysql describe \
+  [--host <hostname>] \
+  [--port <port>] \
+  [--database <dbname>] \
+  [--user <username>] \
+  [--password <password>] \
+  --table <table_name>
+```
+
+Options:
+
+- `--host <hostname>`     Database host (default: `localhost`)
+- `--port <port>`         Database port (default: `3306`)
+- `--database <dbname>`   Database name (default: `mysql`)
+- `--user <username>`     Database user (default: `root`)
+- `--password <password>` Database password
+- `--table <table_name>`  Name of the table to describe (bound safely as a named parameter)
+
+Example:
+
+```bash
+aux4 db mysql describe \
+  --host localhost --port 3306 --database mydb --user root --password mypass \
+  --table product
+```
+
+```json
+[
+  {"name":"id","type":"int","nullable":false,"default":null,"key":"PRI","extra":"auto_increment","comment":"Unique product identifier"},
+  {"name":"name","type":"varchar","nullable":false,"default":null,"key":"","extra":"","comment":"Product display name"},
+  {"name":"price","type":"decimal","nullable":true,"default":"0.00","key":"","extra":"","comment":"Unit price in USD"}
+]
+```
+
+#### aux4 db mysql desc
+
+Alias of `describe` — accepts the exact same flags and produces the exact same output.
+
+```bash
+aux4 db mysql desc \
+  --host localhost --port 3306 --database mydb --user root --password mypass \
+  --table product
+```
+
+#### aux4 db mysql list tables
+
+List the base tables in the current database, each with its table comment.
+
+Usage:
+```bash
+aux4 db mysql list tables \
+  [--host <hostname>] \
+  [--port <port>] \
+  [--database <dbname>] \
+  [--user <username>] \
+  [--password <password>]
+```
+
+Example:
+
+```bash
+aux4 db mysql list tables \
+  --host localhost --port 3306 --database mydb --user root --password mypass
+```
+
+```json
+[
+  {"name":"product","comment":"Catalog of products for sale"}
+]
+```
+
+### Canonical Output Schema
+
+Introspection output uses a **fixed, dialect-independent** set of keys so that tooling works identically across every `aux4/db-*` adapter. Missing information is reported as `null`.
+
+`describe` — one object per column, keys always in this order:
+
+| Key | Type | Meaning |
+|-----|------|---------|
+| `name` | string | Column name |
+| `type` | string | Column data type (e.g. `int`, `varchar`, `decimal`) |
+| `nullable` | boolean | `true` if the column accepts `NULL`, `false` otherwise |
+| `default` | string \| null | Default value, or `null` when there is none |
+| `key` | string | Key role: `PRI` for primary key, `UNI`/`MUL` for indexed columns, `""` otherwise |
+| `extra` | string | Extra attributes such as `auto_increment` (`""` when none) |
+| `comment` | string | Column comment (`""` when none) |
+
+`list tables` — one object per table:
+
+| Key | Type | Meaning |
+|-----|------|---------|
+| `name` | string | Table name |
+| `comment` | string | Table comment (`""` when none) |
+
+**Notes:**
+- `nullable` is a real JSON boolean (`true`/`false`) — never the string `"YES"`/`"NO"` and never the number `1`/`0`.
+- `comment` carries the semantic description of the column or table, which is especially useful for AI agents exploring an unfamiliar schema.
+- Fields a given SQL dialect cannot provide are returned as `null` so the object shape stays identical across adapters.
 
 ## Output Formats
 

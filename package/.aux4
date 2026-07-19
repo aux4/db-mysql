@@ -149,6 +149,133 @@
               }
             ]
           }
+        },
+        {
+          "name": "describe",
+          "execute": [
+            "stdin:aux4 db driver prepare execute --query \"SELECT COLUMN_NAME AS \\\"name\\\", DATA_TYPE AS \\\"type\\\", CASE WHEN IS_NULLABLE='YES' THEN true ELSE false END AS \\\"nullable\\\", COLUMN_DEFAULT AS \\\"default\\\", COLUMN_KEY AS \\\"key\\\", EXTRA AS \\\"extra\\\", COLUMN_COMMENT AS \\\"comment\\\" FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=:table ORDER BY ORDINAL_POSITION\" --params value(*) | node ${packageDir}/lib/aux4-db-mysql.js values(host, port, database, user, password) | node -e \"let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{const t=d.trim();const o=t?JSON.parse(t).map(r=>{r.nullable=r.nullable?true:false;return r;}):'';o?console.log(JSON.stringify(o)):0;});\""
+          ],
+          "help": {
+            "text": "Describe the columns of a table",
+            "variables": [
+              {
+                "name": "host",
+                "text": "Database host",
+                "default": "localhost"
+              },
+              {
+                "name": "port",
+                "text": "Database port",
+                "default": "3306"
+              },
+              {
+                "name": "database",
+                "text": "Database name",
+                "default": "mysql"
+              },
+              {
+                "name": "user",
+                "text": "Database user",
+                "default": "root"
+              },
+              {
+                "name": "password",
+                "text": "Database password"
+              },
+              {
+                "name": "table",
+                "text": "Table name to describe"
+              }
+            ]
+          }
+        },
+        {
+          "name": "desc",
+          "execute": [
+            "aux4 db mysql describe params(host, port, database, user, password, table)"
+          ],
+          "help": {
+            "text": "Describe the columns of a table (alias of describe)",
+            "variables": [
+              {
+                "name": "host",
+                "text": "Database host",
+                "default": "localhost"
+              },
+              {
+                "name": "port",
+                "text": "Database port",
+                "default": "3306"
+              },
+              {
+                "name": "database",
+                "text": "Database name",
+                "default": "mysql"
+              },
+              {
+                "name": "user",
+                "text": "Database user",
+                "default": "root"
+              },
+              {
+                "name": "password",
+                "text": "Database password"
+              },
+              {
+                "name": "table",
+                "text": "Table name to describe"
+              }
+            ]
+          }
+        },
+        {
+          "name": "list",
+          "execute": [
+            "profile:db:mysql:list"
+          ],
+          "help": {
+            "text": "List database objects (tables, ...)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "db:mysql:list",
+      "commands": [
+        {
+          "name": "tables",
+          "execute": [
+            "stdin:aux4 db driver prepare execute --query \"SELECT TABLE_NAME AS \\\"name\\\", TABLE_COMMENT AS \\\"comment\\\" FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME\" --params value(*) | node ${packageDir}/lib/aux4-db-mysql.js values(host, port, database, user, password)"
+          ],
+          "help": {
+            "text": "List the base tables in the database",
+            "variables": [
+              {
+                "name": "host",
+                "text": "Database host",
+                "default": "localhost"
+              },
+              {
+                "name": "port",
+                "text": "Database port",
+                "default": "3306"
+              },
+              {
+                "name": "database",
+                "text": "Database name",
+                "default": "mysql"
+              },
+              {
+                "name": "user",
+                "text": "Database user",
+                "default": "root"
+              },
+              {
+                "name": "password",
+                "text": "Database password"
+              }
+            ]
+          }
         }
       ]
     }

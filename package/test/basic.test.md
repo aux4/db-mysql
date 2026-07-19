@@ -311,3 +311,144 @@ aux4 db mysql stream --host localhost --port 3306 --database test --user root --
 ```error
 {"item":{},"query":"SELECT invalid_column FROM users LIMIT 1","error":"Unknown column 'invalid_column' in 'field list'"}
 ```
+
+# Schema Introspection
+
+```beforeAll
+aux4 db mysql execute --host localhost --port 3306 --user root --password mysecretpassword --query "CREATE DATABASE IF NOT EXISTS introspect_test"
+```
+
+```beforeAll
+aux4 db mysql execute --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword --query "CREATE TABLE IF NOT EXISTS product (id INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Unique product identifier', name VARCHAR(100) NOT NULL COMMENT 'Product display name', price DECIMAL(10,2) DEFAULT '0.00' COMMENT 'Unit price in USD') COMMENT='Catalog of products for sale'"
+```
+
+```afterAll
+aux4 db mysql execute --host localhost --port 3306 --user root --password mysecretpassword --query "DROP DATABASE IF EXISTS introspect_test"
+```
+
+## Describe a table
+
+### should return canonical column metadata including comments
+
+```execute
+aux4 db mysql describe --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword --table product
+```
+
+```expect:json
+[
+  {
+    "name": "id",
+    "type": "int",
+    "nullable": false,
+    "default": null,
+    "key": "PRI",
+    "extra": "auto_increment",
+    "comment": "Unique product identifier"
+  },
+  {
+    "name": "name",
+    "type": "varchar",
+    "nullable": false,
+    "default": null,
+    "key": "",
+    "extra": "",
+    "comment": "Product display name"
+  },
+  {
+    "name": "price",
+    "type": "decimal",
+    "nullable": true,
+    "default": "0.00",
+    "key": "",
+    "extra": "",
+    "comment": "Unit price in USD"
+  }
+]
+```
+
+### should expose exactly the canonical key set in order
+
+```execute
+aux4 db mysql describe --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword --table product | jq -c '.[0] | keys_unsorted'
+```
+
+```expect
+["name","type","nullable","default","key","extra","comment"]
+```
+
+### should emit nullable as a real JSON boolean (not "YES"/"NO", not 1/0)
+
+```execute
+aux4 db mysql describe --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword --table product | jq -c 'map(.nullable | type)'
+```
+
+```expect
+["boolean","boolean","boolean"]
+```
+
+## Describe a table with the desc alias
+
+### should behave the same as describe
+
+```execute
+aux4 db mysql desc --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword --table product
+```
+
+```expect:json
+[
+  {
+    "name": "id",
+    "type": "int",
+    "nullable": false,
+    "default": null,
+    "key": "PRI",
+    "extra": "auto_increment",
+    "comment": "Unique product identifier"
+  },
+  {
+    "name": "name",
+    "type": "varchar",
+    "nullable": false,
+    "default": null,
+    "key": "",
+    "extra": "",
+    "comment": "Product display name"
+  },
+  {
+    "name": "price",
+    "type": "decimal",
+    "nullable": true,
+    "default": "0.00",
+    "key": "",
+    "extra": "",
+    "comment": "Unit price in USD"
+  }
+]
+```
+
+## List tables
+
+### should list base tables with their comment
+
+```execute
+aux4 db mysql list tables --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword
+```
+
+```expect:json
+[
+  {
+    "name": "product",
+    "comment": "Catalog of products for sale"
+  }
+]
+```
+
+### should expose exactly the canonical key set in order
+
+```execute
+aux4 db mysql list tables --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword | jq -c '.[0] | keys_unsorted'
+```
+
+```expect
+["name","comment"]
+```
