@@ -38,7 +38,6 @@ aux4 db mysql execute \
 - [`aux4 db mysql execute`](./commands/db/mysql/execute) - Execute SQL statements on a MySQL database and return all results as a JSON array.
 - [`aux4 db mysql stream`](./commands/db/mysql/stream) - Execute SQL statements and stream each row as a newline-delimited JSON object.
 - [`aux4 db mysql describe`](./commands/db/mysql/describe) - Describe the columns of a table (types, keys, defaults, and comments) using a stable canonical schema.
-- [`aux4 db mysql desc`](./commands/db/mysql/desc) - Alias of `describe`.
 - [`aux4 db mysql list tables`](./commands/db/mysql/list/tables) - List the base tables in the current database with their comments.
 
 ### Command Reference
@@ -191,16 +190,6 @@ aux4 db mysql describe \
 ```
 
 Only keys that carry a value are returned — `null` and empty (`""`) fields are omitted, so a plain column is just `{"name", "type", "nullable"}`. `nullable` is always present.
-
-#### aux4 db mysql desc
-
-Alias of `describe` — accepts the exact same flags and produces the exact same output.
-
-```bash
-aux4 db mysql desc \
-  --host localhost --port 3306 --database mydb --user root --password mypass \
-  --table product
-```
 
 #### aux4 db mysql list tables
 

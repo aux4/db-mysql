@@ -409,45 +409,6 @@ aux4 db mysql describe --host localhost --port 3306 --database introspect_test -
 ["boolean","boolean","boolean","boolean"]
 ```
 
-## Describe a table with the desc alias
-
-### should behave the same as describe
-
-```execute
-aux4 db mysql desc --host localhost --port 3306 --database introspect_test --user root --password mysecretpassword --table product
-```
-
-```expect:json
-[
-  {
-    "name": "id",
-    "type": "int",
-    "nullable": false,
-    "key": "PRI",
-    "extra": "auto_increment",
-    "comment": "Unique product identifier"
-  },
-  {
-    "name": "name",
-    "type": "varchar",
-    "nullable": false,
-    "comment": "Product display name"
-  },
-  {
-    "name": "price",
-    "type": "decimal",
-    "nullable": true,
-    "default": "0.00",
-    "comment": "Unit price in USD"
-  },
-  {
-    "name": "sku",
-    "type": "varchar",
-    "nullable": true
-  }
-]
-```
-
 ## List tables
 
 ### should list base tables qualified by database, with comments when present

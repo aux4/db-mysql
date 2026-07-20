@@ -190,45 +190,6 @@
           }
         },
         {
-          "name": "desc",
-          "execute": [
-            "aux4 db mysql describe params(host, port, database, user, password, table)"
-          ],
-          "help": {
-            "text": "Describe the columns of a table (alias of describe)",
-            "variables": [
-              {
-                "name": "host",
-                "text": "Database host",
-                "default": "localhost"
-              },
-              {
-                "name": "port",
-                "text": "Database port",
-                "default": "3306"
-              },
-              {
-                "name": "database",
-                "text": "Database name",
-                "default": "mysql"
-              },
-              {
-                "name": "user",
-                "text": "Database user",
-                "default": "root"
-              },
-              {
-                "name": "password",
-                "text": "Database password"
-              },
-              {
-                "name": "table",
-                "text": "Table name to describe"
-              }
-            ]
-          }
-        },
-        {
           "name": "list",
           "execute": [
             "profile:db:mysql:list"
